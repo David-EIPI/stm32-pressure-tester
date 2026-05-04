@@ -902,44 +902,40 @@ void update_screen(void)
   if (NULL == lcd_dev)
       return;
 
+  uint32_t v1, v2;
+  int32_t u1, u2;
   /* Use Pa */
   if (UNITS_SET1 == active_units) {
-      uint32_t v1 = bmp5_data[STATIC_PRESSURE_SENSOR_INDEX].pressure/100;
-      uint32_t v2 = serial_exchange_data.control.static_pressure;
-      int32_t u1 = ms5525_data.pressure;
-      int32_t u2 = serial_exchange_data.control.pitot_pressure;
-
-      lcd_printf(lcd_dev, 0, 0, "%8u  %8d", v1, u1);
-
-      lcd_printf(lcd_dev, 0, 1, "%8u  %8d", v2, u2);
+      v1 = bmp5_data[STATIC_PRESSURE_SENSOR_INDEX].pressure;
+      v2 = serial_exchange_data.control.static_pressure*100;
+      u1 = ms5525_data.pressure;
+      u2 = serial_exchange_data.control.pitot_pressure*100;
   }
 
   /* Use PSI */
   if (UNITS_SET2 == active_units) {
-      uint32_t v1 = pa100_to_psi(bmp5_data[STATIC_PRESSURE_SENSOR_INDEX].pressure);
-      int32_t v2 = pa_to_psi(serial_exchange_data.control.static_pressure);
-      int32_t u1 = pa_to_psi(ms5525_data.pressure);
-      int32_t u2 = pa_to_psi(serial_exchange_data.control.pitot_pressure);
-
-      lcd_printf(lcd_dev, 0, 0, "%5u.%02u  %5u.%02u", v1/100, v1%100, u1/100, u2%100);
-
-      lcd_printf(lcd_dev, 0, 1, "%5u.%02u  %5u.%02u", v2/100, v2%100, u2/100, u2%100);
+      v1 = pa100_to_psi(bmp5_data[STATIC_PRESSURE_SENSOR_INDEX].pressure);
+      v2 = pa_to_psi(serial_exchange_data.control.static_pressure);
+      u1 = pa100_to_psi(ms5525_data.pressure);
+      u2 = pa_to_psi(serial_exchange_data.control.pitot_pressure);
   }
 
+  lcd_printf(lcd_dev, 0, 0, "%7u.%02u%6u.%02u", v1/100, v1%100, u1/100, u1%100);
+  lcd_printf(lcd_dev, 0, 1, "%7u.%02u%6u.%02u", v2/100, v2%100, u2/100, u2%100);
 
   int32_t static_ambient_diff = (int32_t)bmp5_data[AMBIENT_PRESSURE_SENSOR_INDEX].pressure -
 	  (int32_t)bmp5_data[STATIC_PRESSURE_SENSOR_INDEX].pressure;
   int32_t w1 = pa100_to_inhg(static_ambient_diff);
   int32_t w2 = pa100_to_inh2o(static_ambient_diff);
-  lcd_printf(lcd_dev, 0, 2, "%5d.%02u  %5d.%02u", w1/100, abs(w1%100), w2/100, abs(w2%100));
+  lcd_printf(lcd_dev, 0, 2, "%7d.%02u%6d.%02u", w1/100, abs(w1%100), w2/100, abs(w2%100));
 
   int32_t pitot_static_diff = (int32_t)bmp5_data[AMBIENT_PRESSURE_SENSOR_INDEX].pressure -
-	  (int32_t)ms5525_data.pressure*100;
+	  (int32_t)ms5525_data.pressure;
 
   w1 = pa100_to_inhg(pitot_static_diff);
   w2 = pa100_to_inh2o(pitot_static_diff);
 
-  lcd_printf(lcd_dev, 0, 3, "%5d.%02u  %5d.%02u", w1/100, abs(w1%100), w2/100, abs(w2%100));
+  lcd_printf(lcd_dev, 0, 3, "%7d.%02u%6d.%02u", w1/100, abs(w1%100), w2/100, abs(w2%100));
 
 //  lcd_printf(lcd_dev, 0, 3, "T3=%3d.%02d\xb2", ms5525_data.temperature/100, ms5525_data.temperature%100);
   lcd_flush(lcd_dev);

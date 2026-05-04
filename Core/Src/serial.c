@@ -278,7 +278,7 @@ struct {
     },
     {
 	.desc = "Pitot pressure,  Pa - MS5525D",
-	.div = 1,
+	.div = 100,
 	.value = (int32_t*)&ms5525_data.pressure,
     },
     {
@@ -291,6 +291,9 @@ struct {
 static
 void rx_handler_display_sensors(uint8_t code, int32_t parameter)
 {
+  if (parameter == MISSING_PARAM)
+    parameter = 1;
+
   unsigned i = 0;
   for (i = 0; i < lengthof(sensor_data_desc); i++) {
       int c1, c2;
@@ -304,7 +307,14 @@ void rx_handler_display_sensors(uint8_t code, int32_t parameter)
       int32_t i_value = *(sensor_data_desc[i].value);
       int f_value = abs(i_value % sensor_data_desc[i].div);
       i_value /= sensor_data_desc[i].div;
-      int n = sprintf((char *)cdc_buf, "%s\t%6ld.%02d\%c%c", sensor_data_desc[i].desc, i_value, f_value, c1, c2);
+      int n;
+      if (0 != parameter) {
+	  /* Human readable output */
+	  n = sprintf((char *)cdc_buf, "%s\t%6ld.%02d\%c%c", sensor_data_desc[i].desc, i_value, f_value, c1, c2);
+      } else {
+	  /* Un-annotated output */
+	  n = sprintf((char *)cdc_buf, "%6ld.%02d\r\n", i_value, f_value);
+      }
       CDC_Transmit_FS(cdc_buf, n);
       HAL_Delay(CDC_OUTPUT_DELAY);
   }
@@ -332,7 +342,7 @@ struct rx_handlers_s {
 	rx_handler_help_text
     },
     {
-	'i',
+	's',
 	"[0..9]  \tSet static pressure, Pa",
 	rx_handler_static_pressure
     },
@@ -347,7 +357,7 @@ struct rx_handlers_s {
 	rx_handler_stepper_coef,
     },
     {
-	'o',
+	'i',
 	"[+-0..9]\tSet Pitot pressure, Pa",
 	rx_handler_pitot_pressure
     },
@@ -362,8 +372,8 @@ struct rx_handlers_s {
 	rx_handler_pressure_tolerance
     },
     {
-	's',
-	"\t\tDisplay current sensors\' readings",
+	'o',
+	"[1|0]\t\tOutput current sensors\' data (human-readable on|off)",
 	rx_handler_display_sensors
     },
     {

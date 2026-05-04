@@ -224,8 +224,8 @@ static void ms5525_calculate(ms5525_ref dev)
       const int8_t *Q = *(dev->Q_ref) - 1;
       int64_t off = ((int64_t)dev->C[2] << Q[2]) + (((int64_t)dev->C[4] * dev->diff_t) >> Q[4]);
       int64_t sens = ((int64_t)dev->C[1] << Q[1]) + (((int64_t)dev->C[3] * dev->diff_t) >> Q[3]);
-      int32_t p_psi = (int32_t)((((sens * raw_p) >> 21) - off) >> 15);
-      dev->data.pressure = (p_psi * 6895) / 10000; /* convert to Pa */
+      int32_t p_pa100 = (int32_t)((((sens * raw_p) >> 21) - off + (475/2)) / 475);
+      dev->data.pressure = p_pa100;
       dev->data.type |= MS5525DSO_DATA_PRESSURE;
   }
 }

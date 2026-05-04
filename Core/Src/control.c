@@ -229,7 +229,7 @@ inline static void set_stepper(bool onoff, bool positive)
       }
 
       /* Calculate proportional motor speed */
-      int32_t pitot_delta = abs(ms5525_data.pressure - serial_exchange_data.control.pitot_pressure);
+      int32_t pitot_delta = abs(ms5525_data.pressure/100 - serial_exchange_data.control.pitot_pressure);
 
       uint32_t max_freq = serial_exchange_data.control.stepper_freq;
 
@@ -269,7 +269,7 @@ void read_input_signals(void)
 {
   int32_t static_pressure = bmp5_data[STATIC_PRESSURE_SENSOR_INDEX].pressure / 100;
   int32_t atm_pressure = bmp5_data[AMBIENT_PRESSURE_SENSOR_INDEX].pressure / 100;
-  int32_t pitot_pressure = ms5525_data.pressure;
+  int32_t pitot_pressure = ms5525_data.pressure / 100;
 
   int32_t static_delta = static_pressure - serial_exchange_data.control.static_pressure;
   int32_t pitot_delta = pitot_pressure - serial_exchange_data.control.pitot_pressure;
