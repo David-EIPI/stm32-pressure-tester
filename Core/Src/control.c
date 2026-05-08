@@ -64,7 +64,7 @@ const char sm_state_idstr[SM_STATE_COUNT][8] = {
 static const uint32_t VALVE_ACTIVE_PIN_STATE = 0;
 static const uint32_t VACPUMP_ACTIVE_PIN_STATE = 0;
 static const uint32_t PRESSPUMP_ACTIVE_PIN_STATE = 0;
-static const uint32_t STEPPER_POSITIVE_DIRECTION_PIN_STATE = 0;
+static const uint32_t STEPPER_POSITIVE_DIRECTION_PIN_STATE = 1;
 
 /*
  * State machine definition.
@@ -242,7 +242,7 @@ inline static void set_stepper(bool onoff, bool positive)
       if (freq > max_freq)
 	freq = max_freq;
 
-/* The timer that drives stepper output uses microsecond timer as clock source. */
+/* The timer that drives stepper output counts microseconds. */
       int32_t stepper_reload_value = 1000000 / freq;
 /* Set compare value at 1/2 of the reload value to generate 50% duty cycle pulses */
       int32_t stepper_compare_value = stepper_reload_value / 2;
