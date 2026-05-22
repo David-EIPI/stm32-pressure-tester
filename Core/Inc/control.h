@@ -23,6 +23,8 @@ typedef void (*sm_transition_cb)(uint32_t old_state, uint32_t new_state);
 
 extern control_output_t control_output;
 
+extern uint32_t dbg_stepper_freq;
+
 void run_control_loop();
 
 #endif /* SRC_CONTROL_H_ */

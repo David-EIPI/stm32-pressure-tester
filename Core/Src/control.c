@@ -200,6 +200,7 @@ static uint32_t sm_vector_current = 0;
 
 static uint8_t current_debug_output = 0;
 
+uint32_t dbg_stepper_freq = 0;
 /*
  * Helper functions
  */
@@ -223,30 +224,32 @@ inline static void set_stepper(bool onoff, bool positive)
 
 /* Set direction pin before starting pulses */
       if (positive ^ (0 == STEPPER_POSITIVE_DIRECTION_PIN_STATE)) {
-	  LL_GPIO_SetOutputPin(LED_PIN_GPIO_Port, LED_PIN_Pin);
+	  LL_GPIO_SetOutputPin(STEPPER_DIR_GPIO_Port, STEPPER_DIR_Pin);
       } else {
-	  LL_GPIO_ResetOutputPin(LED_PIN_GPIO_Port, LED_PIN_Pin);
+	  LL_GPIO_ResetOutputPin(STEPPER_DIR_GPIO_Port, STEPPER_DIR_Pin);
       }
 
       /* Calculate proportional motor speed */
-      int32_t pitot_delta = abs(ms5525_data.pressure/100 - serial_exchange_data.control.pitot_pressure);
+      int32_t pitot_delta = abs(serial_exchange_data.control.pitot_pressure - ms5525_data.pressure/100);
 
       uint32_t max_freq = serial_exchange_data.control.stepper_freq;
 
-      uint32_t freq = max_freq * pitot_delta * serial_exchange_data.control.stepper_p / 256;
+      uint32_t freq = (max_freq * pitot_delta / 16) * serial_exchange_data.control.stepper_p / 256;
 
       /* Apply limits */
-      if (freq < max_freq / 20)
-	freq = max_freq / 20;
+      if (freq < max_freq / 100)
+	freq = max_freq / 100;
 
       if (freq > max_freq)
 	freq = max_freq;
 
+      dbg_stepper_freq = freq;
 /* The timer that drives stepper output counts microseconds. */
-      int32_t stepper_reload_value = 1000000 / freq;
+      uint32_t stepper_reload_value = 1000000 / freq;
 /* Set compare value at 1/2 of the reload value to generate 50% duty cycle pulses */
-      int32_t stepper_compare_value = stepper_reload_value / 2;
+      uint32_t stepper_compare_value = stepper_reload_value / 2;
 
+      LL_TIM_EnableCounter(TIM4);
       LL_TIM_SetAutoReload(StepperTimer, stepper_reload_value);
       LL_TIM_OC_SetCompareCH_Stepper(StepperTimer, stepper_compare_value);
       LL_TIM_CC_EnableChannel(StepperTimer, StepperChannel);
@@ -254,6 +257,7 @@ inline static void set_stepper(bool onoff, bool positive)
 /* Stop pulses */
       LL_TIM_SetAutoReload(StepperTimer, 0);
       LL_TIM_CC_DisableChannel(StepperTimer, StepperChannel);
+      LL_TIM_DisableCounter(TIM4);
   }
 }
 
@@ -278,15 +282,15 @@ void read_input_signals(void)
 
   set_sm_state(SM_SENSORS_ACTIVE,  (HAL_OK == sensors_active));
 
-  set_sm_state(SM_STATIC_LOW,      (static_delta < -serial_exchange_data.control.tolerance));
-  set_sm_state(SM_STATIC_LOW_TOL,  (static_delta < 0) && (static_delta > -serial_exchange_data.control.tolerance));
-  set_sm_state(SM_STATIC_HIGH_TOL, (static_delta > 0) && (static_delta <  serial_exchange_data.control.tolerance));
-  set_sm_state(SM_STATIC_HIGH,     (static_delta > serial_exchange_data.control.tolerance));
+  set_sm_state(SM_STATIC_LOW,      (static_delta < -serial_exchange_data.control.tolerance_s));
+  set_sm_state(SM_STATIC_LOW_TOL,  (static_delta < 0) && (static_delta > -serial_exchange_data.control.tolerance_s));
+  set_sm_state(SM_STATIC_HIGH_TOL, (static_delta > 0) && (static_delta <  serial_exchange_data.control.tolerance_s));
+  set_sm_state(SM_STATIC_HIGH,     (static_delta > serial_exchange_data.control.tolerance_s));
 
-  set_sm_state(SM_PITOT_LOW,      (pitot_delta < -serial_exchange_data.control.tolerance));
-  set_sm_state(SM_PITOT_LOW_TOL,  (pitot_delta < 0) && (pitot_delta > -serial_exchange_data.control.tolerance));
-  set_sm_state(SM_PITOT_HIGH_TOL, (pitot_delta > 0) && (pitot_delta <  serial_exchange_data.control.tolerance));
-  set_sm_state(SM_PITOT_HIGH,     (pitot_delta > serial_exchange_data.control.tolerance));
+  set_sm_state(SM_PITOT_LOW,      (pitot_delta < -serial_exchange_data.control.tolerance_p));
+  set_sm_state(SM_PITOT_LOW_TOL,  (pitot_delta < 0) && (pitot_delta > -serial_exchange_data.control.tolerance_p));
+  set_sm_state(SM_PITOT_HIGH_TOL, (pitot_delta > 0) && (pitot_delta <  serial_exchange_data.control.tolerance_p));
+  set_sm_state(SM_PITOT_HIGH,     (pitot_delta > serial_exchange_data.control.tolerance_p));
 
   set_sm_state(SM_NEAR_ATM_PRESS, static_atm_delta < atm_pressure/16);
 
@@ -318,9 +322,9 @@ void set_output_signals(void)
   }
 
   if (get_sm_state(SM_PRESSPUMP_ON) ^ (0 == PRESSPUMP_ACTIVE_PIN_STATE)) {
-      LL_GPIO_SetOutputPin(PUMP1_GPIO_Port, PUMP2_Pin);
+      LL_GPIO_SetOutputPin(PUMP2_GPIO_Port, PUMP2_Pin);
   } else {
-      LL_GPIO_ResetOutputPin(PUMP1_GPIO_Port, PUMP2_Pin);
+      LL_GPIO_ResetOutputPin(PUMP2_GPIO_Port, PUMP2_Pin);
   }
 
   set_stepper(get_sm_state(SM_STEPPER_ON),
@@ -339,6 +343,15 @@ void debug_state_transitions(uint32_t new_state)
 
   uint32_t off_states = (debug_old_state ^ new_state) & debug_old_state;
   uint32_t on_states = (debug_old_state ^ new_state) & new_state;
+
+  if (0 == debug_old_state && (serial_exchange_data.control.sm_debug_output & 2)) {
+      usb_cdc_printf("f=%d\r\n", dbg_stepper_freq);
+      uint32_t port = LL_GPIO_ReadOutputPort(GPIOA);
+      usb_cdc_printf("portA=0x%x\r\n", port);
+      port = LL_GPIO_ReadOutputPort(GPIOB);
+      usb_cdc_printf("portB=0x%x\r\n", port);
+  }
+
   debug_old_state = new_state;
 
   unsigned i;

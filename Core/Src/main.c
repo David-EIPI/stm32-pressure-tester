@@ -130,7 +130,6 @@ static void MX_DMA_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM1_Init(void);
-static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM2_Init(void);
@@ -248,7 +247,6 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USB_DEVICE_Init();
   MX_TIM1_Init();
-  MX_TIM3_Init();
   MX_TIM4_Init();
   MX_I2C1_Init();
   MX_TIM2_Init();
@@ -258,7 +256,7 @@ int main(void)
 //  LL_TIM_CC_EnableChannel(TIM1, LL_TIM_CHANNEL_CH1 | LL_TIM_CHANNEL_CH2 | LL_TIM_CHANNEL_CH3);
   LL_TIM_EnableCounter(TIM1);
   LL_TIM_EnableCounter(TIM2);
-  LL_TIM_EnableCounter(TIM3);
+//  LL_TIM_EnableCounter(TIM3);
   LL_TIM_EnableCounter(TIM4);
 
   load_control_parameters(&hi2c2);
@@ -592,44 +590,6 @@ static void MX_TIM2_Init(void)
 }
 
 /**
-  * @brief TIM3 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM3_Init(void)
-{
-
-  /* USER CODE BEGIN TIM3_Init 0 */
-
-  /* USER CODE END TIM3_Init 0 */
-
-  LL_TIM_InitTypeDef TIM_InitStruct = {0};
-
-  /* Peripheral clock enable */
-  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM3);
-
-  /* USER CODE BEGIN TIM3_Init 1 */
-
-  /* USER CODE END TIM3_Init 1 */
-  TIM_InitStruct.Prescaler = 1;
-  TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
-  TIM_InitStruct.Autoreload = 500;
-  TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
-  LL_TIM_Init(TIM3, &TIM_InitStruct);
-  LL_TIM_DisableARRPreload(TIM3);
-  LL_TIM_SetTriggerInput(TIM3, LL_TIM_TS_ITR0);
-  LL_TIM_SetClockSource(TIM3, LL_TIM_CLOCKSOURCE_EXT_MODE1);
-  LL_TIM_DisableIT_TRIG(TIM3);
-  LL_TIM_DisableDMAReq_TRIG(TIM3);
-  LL_TIM_SetTriggerOutput(TIM3, LL_TIM_TRGO_RESET);
-  LL_TIM_DisableMasterSlaveMode(TIM3);
-  /* USER CODE BEGIN TIM3_Init 2 */
-
-  /* USER CODE END TIM3_Init 2 */
-
-}
-
-/**
   * @brief TIM4 Initialization Function
   * @param None
   * @retval None
@@ -678,7 +638,7 @@ static void MX_TIM4_Init(void)
   */
   GPIO_InitStruct.Pin = STEPPER_STEP_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   LL_GPIO_Init(STEPPER_STEP_GPIO_Port, &GPIO_InitStruct);
 
@@ -790,7 +750,7 @@ static void MX_GPIO_Init(void)
   /**/
   GPIO_InitStruct.Pin = MS5525_LED_Pin|BMP5_LED2_Pin|STEPPER_DIR_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
@@ -804,7 +764,7 @@ static void MX_GPIO_Init(void)
   /**/
   GPIO_InitStruct.Pin = VALVE1_Pin|VALVE2_Pin|PUMP1_Pin|PUMP2_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_MEDIUM;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
   LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
@@ -920,7 +880,7 @@ void update_indication_leds(void)
   }
 }
 
-static uint32_t pa100_to_psi(uint32_t pa100)
+static int32_t pa100_to_psi(int32_t pa100)
 {
   return pa100 / 6895;
 }
@@ -955,14 +915,14 @@ void update_screen(void)
   if (NULL == lcd_dev)
       return;
 
-  uint32_t v1, v2;
-  int32_t u1, u2;
+  int32_t v1 = 0, v2 = 0;
+  int32_t u1 = 0, u2 = 0;
   /* Use Pa */
   if (UNITS_SET1 == active_units) {
-      v1 = bmp5_data[STATIC_PRESSURE_SENSOR_INDEX].pressure;
-      v2 = serial_exchange_data.control.static_pressure*100;
-      u1 = ms5525_data.pressure;
-      u2 = serial_exchange_data.control.pitot_pressure*100;
+      v1 = bmp5_data[STATIC_PRESSURE_SENSOR_INDEX].pressure/1000;
+      v2 = serial_exchange_data.control.static_pressure/10;
+      u1 = ms5525_data.pressure/1000;
+      u2 = serial_exchange_data.control.pitot_pressure/10;
   }
 
   /* Use PSI */
@@ -973,22 +933,27 @@ void update_screen(void)
       u2 = pa_to_psi(serial_exchange_data.control.pitot_pressure);
   }
 
-  lcd_printf(lcd_dev, 0, 0, "%7u.%02u%6u.%02u", v2/100, v2%100, u2/100, u2%100);
-  lcd_printf(lcd_dev, 0, 1, "%7u.%02u%6u.%02u", v1/100, v1%100, u1/100, u1%100);
+  lcd_printf(lcd_dev, 0, 0, "%7u.%02u%6d.%02u", v2/100, v2%100, u2/100, abs(u2%100));
+  lcd_printf(lcd_dev, 0, 1, "%7u.%02u%6d.%02u", v1/100, v1%100, u1/100, abs(u1%100));
+
 
   int32_t static_ambient_diff = (int32_t)bmp5_data[AMBIENT_PRESSURE_SENSOR_INDEX].pressure -
 	  (int32_t)bmp5_data[STATIC_PRESSURE_SENSOR_INDEX].pressure;
-  int32_t w1 = pa100_to_inhg(static_ambient_diff);
-  int32_t w2 = pa100_to_inh2o(static_ambient_diff);
-  lcd_printf(lcd_dev, 0, 2, "%7d.%02u%6d.%02u", w1/100, abs(w1%100), w2/100, abs(w2%100));
 
+  int32_t set_ambient_diff = (int32_t)bmp5_data[AMBIENT_PRESSURE_SENSOR_INDEX].pressure -
+	  (int32_t)serial_exchange_data.control.static_pressure*100;
+/*
   int32_t pitot_static_diff = (int32_t)bmp5_data[AMBIENT_PRESSURE_SENSOR_INDEX].pressure -
 	  (int32_t)ms5525_data.pressure;
+*/
+  int32_t w1 = pa100_to_inhg(static_ambient_diff);
+  int32_t w2 = pa100_to_inhg(set_ambient_diff);
 
-  w1 = pa100_to_inhg(pitot_static_diff);
-  w2 = pa100_to_inh2o(pitot_static_diff);
+  int32_t z1 = pa100_to_inh2o(ms5525_data.pressure);
+  int32_t z2 = pa100_to_inh2o(serial_exchange_data.control.pitot_pressure*100);
 
-  lcd_printf(lcd_dev, 0, 3, "%7d.%02u%6d.%02u", w1/100, abs(w1%100), w2/100, abs(w2%100));
+  lcd_printf(lcd_dev, 0, 2, "%7d.%02u%6d.%02u", w2/100, abs(w2%100), z2/100, abs(z2%100));
+  lcd_printf(lcd_dev, 0, 3, "%7d.%02u%6d.%02u", w1/100, abs(w1%100), z1/100, abs(z1%100));
 
 //  lcd_printf(lcd_dev, 0, 3, "T3=%3d.%02d\xb2", ms5525_data.temperature/100, ms5525_data.temperature%100);
   lcd_flush(lcd_dev);

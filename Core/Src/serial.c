@@ -26,9 +26,10 @@ serial_exchange_data_t serial_exchange_data = {
     },
     .control.static_pressure = 100000,
     .control.pitot_pressure = 1000,
-    .control.tolerance = 5,
+    .control.tolerance_s = 1000,
+    .control.tolerance_p = 100,
     .control.stepper_freq = 1000,
-    .control.stepper_p = 50,
+    .control.stepper_p = 10,
 };
 
 //extern struct bmp5_sensor_data bmp5_data[2];
@@ -177,11 +178,20 @@ void rx_handler_pitot_pressure(uint8_t code, int32_t parameter)
 }
 
 static
-void rx_handler_pressure_tolerance(uint8_t code, int32_t parameter)
+void rx_handler_pressure_tolerance_s(uint8_t code, int32_t parameter)
 {
   if (parameter != MISSING_PARAM) {
-      serial_exchange_data.control.sm_modified = serial_exchange_data.control.tolerance != parameter;
-      serial_exchange_data.control.tolerance = parameter;
+      serial_exchange_data.control.sm_modified = serial_exchange_data.control.tolerance_s != parameter;
+      serial_exchange_data.control.tolerance_s = parameter;
+  }
+}
+
+static
+void rx_handler_pressure_tolerance_p(uint8_t code, int32_t parameter)
+{
+  if (parameter != MISSING_PARAM) {
+      serial_exchange_data.control.sm_modified = serial_exchange_data.control.tolerance_p != parameter;
+      serial_exchange_data.control.tolerance_p = parameter;
   }
 }
 
@@ -208,9 +218,9 @@ static
 void rx_handler_debug_output(uint8_t code, int32_t parameter)
 {
   if (parameter != MISSING_PARAM)
-    serial_exchange_data.control.sm_debug_output = parameter != 0;
+    serial_exchange_data.control.sm_debug_output = parameter & 3;
   else
-    serial_exchange_data.control.sm_debug_output ^= 1;
+    serial_exchange_data.control.sm_debug_output = serial_exchange_data.control.sm_debug_output ? 0 : 1;
 }
 
 struct {
@@ -226,8 +236,12 @@ struct {
 	.value = &serial_exchange_data.control.pitot_pressure,
     },
     {
-	.desc = "Tolerance",
-	.value = &serial_exchange_data.control.tolerance,
+	.desc = "Tolerance/static",
+	.value = &serial_exchange_data.control.tolerance_s,
+    },
+    {
+	.desc = "Tolerance/pitot ",
+	.value = &serial_exchange_data.control.tolerance_p,
     },
     {
 	.desc = "Stepper max frequency",
@@ -367,9 +381,14 @@ struct rx_handlers_s {
 	rx_handler_display_parameters
     },
     {
+	'r',
+	"[0..9]  \tTolerance/static, Pa",
+	rx_handler_pressure_tolerance_s
+    },
+    {
 	't',
-	"[0..9]  \tSet tolerance, Pa",
-	rx_handler_pressure_tolerance
+	"[0..9]  \tTolerance/pitot, Pa",
+	rx_handler_pressure_tolerance_p
     },
     {
 	'o',

@@ -35,10 +35,11 @@ typedef struct serial_exchange_data_s {
   struct {
     int32_t static_pressure;
     int32_t pitot_pressure;
-    int32_t tolerance;
+    int32_t tolerance_s;
+    int32_t tolerance_p;
     int32_t stepper_freq; /* Hz */
     int32_t stepper_p;    /* P coefficient, 1/256 x Hz/Pa */
-    unsigned sm_debug_output:1;
+    unsigned sm_debug_output:2;
     unsigned sm_modified:1;
   } control;
 /*
