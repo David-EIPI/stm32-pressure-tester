@@ -243,6 +243,9 @@ inline static void set_stepper(bool onoff, bool positive)
       if (freq > max_freq)
 	freq = max_freq;
 
+      if (freq < 1)
+        freq = 1;
+
       dbg_stepper_freq = freq;
 /* The timer that drives stepper output counts microseconds. */
       uint32_t stepper_reload_value = 1000000 / freq;

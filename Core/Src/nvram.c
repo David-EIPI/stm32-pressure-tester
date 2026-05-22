@@ -153,7 +153,7 @@ HAL_StatusTypeDef nvram_setup(I2C_HandleTypeDef *intf, uint16_t version)
   {
       uint32_t prev_serial_no = page_cache[ci].ncb.serial_no;
 
-      if (++ci > lengthof(page_cache))
+      if (++ci >= lengthof(page_cache))
 	ci = 0;
 
       rslt = read_page(intf, i, ci);

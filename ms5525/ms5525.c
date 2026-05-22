@@ -153,7 +153,7 @@ ms5525_ref ms5525_setup(uint8_t sensor_idx, MS5525DSO_range_t range_var,  MS5525
     dev->osr = osr;
 
     /* Select Q coefficients table for the given range */
-    if (range_var > lengthof(Q_coeff))
+    if (range_var >= lengthof(Q_coeff))
 	range_var = 0;
 
     dev->Q_ref = &Q_coeff[range_var];

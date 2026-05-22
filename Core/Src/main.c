@@ -138,7 +138,7 @@ static void MX_IWDG_Init(void);
 /* USER CODE BEGIN PFP */
 void read_sensors(void);
 void update_screen(void);
-void update_indication_leds(void);
+void update_system_status(void);
 void check_reset_i2c_bus(void);
 /* USER CODE END PFP */
 
@@ -297,8 +297,8 @@ int main(void)
       }
 
       read_sensors();
+      update_system_status();
       run_control_loop();
-      update_indication_leds();
       check_reset_i2c_bus();
       check_button_presses();
     /* USER CODE END WHILE */
@@ -862,7 +862,7 @@ void read_sensors(void)
 
 }
 
-void update_indication_leds(void)
+void update_system_status(void)
 {
   sensors_active = HAL_OK;
   unsigned i;

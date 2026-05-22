@@ -38,6 +38,9 @@ serial_exchange_data_t serial_exchange_data = {
 #define MISSING_PARAM 0x80000000
 #define CDC_OUTPUT_DELAY 10 /* milliseconds */
 
+#define MIN_STATIC_TOLERANCE_PA 1
+#define MIN_PITOT_TOLERANCE_PA  1
+
 struct rx_parser_s {
     uint8_t state;
 
@@ -75,6 +78,8 @@ int usb_cdc_printf(const char *fmt, ...)
   va_start(args, fmt);
   int rslt = vsnprintf((char *)cdc_buf, sizeof(cdc_buf), fmt, args);
   va_end(args);
+  if (rslt > sizeof(cdc_buf))
+    rslt = sizeof(cdc_buf);
   if (rslt > 0)
     CDC_Transmit_FS(cdc_buf, rslt);
 
@@ -180,7 +185,7 @@ void rx_handler_pitot_pressure(uint8_t code, int32_t parameter)
 static
 void rx_handler_pressure_tolerance_s(uint8_t code, int32_t parameter)
 {
-  if (parameter != MISSING_PARAM) {
+  if (parameter != MISSING_PARAM && parameter >= MIN_STATIC_TOLERANCE_PA) {
       serial_exchange_data.control.sm_modified = serial_exchange_data.control.tolerance_s != parameter;
       serial_exchange_data.control.tolerance_s = parameter;
   }
@@ -189,7 +194,7 @@ void rx_handler_pressure_tolerance_s(uint8_t code, int32_t parameter)
 static
 void rx_handler_pressure_tolerance_p(uint8_t code, int32_t parameter)
 {
-  if (parameter != MISSING_PARAM) {
+  if (parameter != MISSING_PARAM && parameter >= MIN_PITOT_TOLERANCE_PA) {
       serial_exchange_data.control.sm_modified = serial_exchange_data.control.tolerance_p != parameter;
       serial_exchange_data.control.tolerance_p = parameter;
   }

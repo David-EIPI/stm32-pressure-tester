@@ -265,7 +265,7 @@ bmp580_ref bmp580_setup(uint8_t sensor_idx, I2C_HandleTypeDef *intf)
     /* Always set the power mode after setting the configuration */
     rslt = bmp5_set_power_mode(BMP5_POWERMODE_CONTINOUS, &bmp580[sel_dev]);
     if (rslt != BMP5_OK) {
-	return NULL;
+        return NULL;
     }
 
     return &bmp580[sel_dev];
@@ -276,8 +276,8 @@ HAL_StatusTypeDef bmp580_read_measurements(struct bmp5_sensor_data *out_data, bm
     int rslt;
 
     rslt = bmp5_get_sensor_data(out_data, &settings, bmp5_dev);
-    if (rslt != HAL_ERROR) {
-    	return rslt;
+    if (rslt != BMP5_OK) {
+        return rslt;
     }
 
     return HAL_OK;
