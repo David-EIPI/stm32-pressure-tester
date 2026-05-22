@@ -277,7 +277,7 @@ HAL_StatusTypeDef bmp580_read_measurements(struct bmp5_sensor_data *out_data, bm
 
     rslt = bmp5_get_sensor_data(out_data, &settings, bmp5_dev);
     if (rslt != BMP5_OK) {
-        return rslt;
+        return HAL_ERROR;
     }
 
     return HAL_OK;

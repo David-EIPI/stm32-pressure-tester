@@ -59,7 +59,7 @@ static uint32_t crc32_formula_reflect(const void *data, size_t len)
   const uint32_t POLY = 0xEDB88320;
 
   const unsigned char *buffer = (const unsigned char*) data;
-  uint32_t crc = -1;
+  uint32_t crc = (uint32_t)-1;
 
   while( len-- ) {
       crc = crc ^ *buffer++;
@@ -151,7 +151,7 @@ HAL_StatusTypeDef nvram_setup(I2C_HandleTypeDef *intf, uint16_t version)
 	      (0 == crc_diff)  &&
 	      version == page_cache[ci].ncb.version; i++)
   {
-      uint32_t prev_serial_no = page_cache[ci].ncb.serial_no;
+      typeof(page_cache[ci].ncb.serial_no) prev_serial_no = page_cache[ci].ncb.serial_no;
 
       if (++ci >= lengthof(page_cache))
 	ci = 0;

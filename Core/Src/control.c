@@ -276,10 +276,9 @@ void read_input_signals(void)
 {
   int32_t static_pressure = bmp5_data[STATIC_PRESSURE_SENSOR_INDEX].pressure / 100;
   int32_t atm_pressure = bmp5_data[AMBIENT_PRESSURE_SENSOR_INDEX].pressure / 100;
-  int32_t pitot_pressure = ms5525_data.pressure / 100;
 
   int32_t static_delta = static_pressure - serial_exchange_data.control.static_pressure;
-  int32_t pitot_delta = pitot_pressure - serial_exchange_data.control.pitot_pressure;
+
 
   int32_t static_atm_delta = atm_pressure - static_pressure;
 
@@ -290,10 +289,17 @@ void read_input_signals(void)
   set_sm_state(SM_STATIC_HIGH_TOL, (static_delta > 0) && (static_delta <  serial_exchange_data.control.tolerance_s));
   set_sm_state(SM_STATIC_HIGH,     (static_delta > serial_exchange_data.control.tolerance_s));
 
-  set_sm_state(SM_PITOT_LOW,      (pitot_delta < -serial_exchange_data.control.tolerance_p));
-  set_sm_state(SM_PITOT_LOW_TOL,  (pitot_delta < 0) && (pitot_delta > -serial_exchange_data.control.tolerance_p));
-  set_sm_state(SM_PITOT_HIGH_TOL, (pitot_delta > 0) && (pitot_delta <  serial_exchange_data.control.tolerance_p));
-  set_sm_state(SM_PITOT_HIGH,     (pitot_delta > serial_exchange_data.control.tolerance_p));
+/* Verify that MS5525 has pressure data before updating dependent input flags */
+  if (0 != (ms5525_data.type | MS5525DSO_DATA_PRESSURE)) {
+
+    int32_t pitot_pressure = ms5525_data.pressure / 100;
+    int32_t pitot_delta = pitot_pressure - serial_exchange_data.control.pitot_pressure;
+
+    set_sm_state(SM_PITOT_LOW,      (pitot_delta < -serial_exchange_data.control.tolerance_p));
+    set_sm_state(SM_PITOT_LOW_TOL,  (pitot_delta < 0) && (pitot_delta > -serial_exchange_data.control.tolerance_p));
+    set_sm_state(SM_PITOT_HIGH_TOL, (pitot_delta > 0) && (pitot_delta <  serial_exchange_data.control.tolerance_p));
+    set_sm_state(SM_PITOT_HIGH,     (pitot_delta > serial_exchange_data.control.tolerance_p));
+  }
 
   set_sm_state(SM_NEAR_ATM_PRESS, static_atm_delta < atm_pressure/16);
 
