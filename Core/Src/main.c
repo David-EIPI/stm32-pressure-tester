@@ -748,14 +748,14 @@ static void MX_GPIO_Init(void)
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = MS5525_LED_Pin|BMP5_LED2_Pin;
+  GPIO_InitStruct.Pin = MS5525_LED_Pin|BMP5_LED2_Pin|STEPPER_DIR_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = MS5525_POWER_Pin|STEPPER_DIR_Pin|BMP5_POWER_Pin;
+  GPIO_InitStruct.Pin = MS5525_POWER_Pin|BMP5_POWER_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
@@ -915,8 +915,8 @@ void update_screen(void)
   if (NULL == lcd_dev)
       return;
 
-  int32_t v1 = 0, v2 = 0;
-  int32_t u1 = 0, u2 = 0;
+  long v1 = 0, v2 = 0;
+  long u1 = 0, u2 = 0;
   /* Use Pa */
   if (UNITS_SET1 == active_units) {
       v1 = bmp5_data[STATIC_PRESSURE_SENSOR_INDEX].pressure/1000;
@@ -933,8 +933,8 @@ void update_screen(void)
       u2 = pa_to_psi(serial_exchange_data.control.pitot_pressure);
   }
 
-  lcd_printf(lcd_dev, 0, 0, "%7u.%02u%6d.%02u", v2/100, v2%100, u2/100, abs(u2%100));
-  lcd_printf(lcd_dev, 0, 1, "%7u.%02u%6d.%02u", v1/100, v1%100, u1/100, abs(u1%100));
+  lcd_printf(lcd_dev, 0, 0, "%7ld.%02ld%6ld.%02ld", v2/100, labs(v2%100), u2/100, labs(u2%100));
+  lcd_printf(lcd_dev, 0, 1, "%7ld.%02ld%6ld.%02ld", v1/100, labs(v1%100), u1/100, labs(u1%100));
 
 
   int32_t static_ambient_diff = (int32_t)bmp5_data[AMBIENT_PRESSURE_SENSOR_INDEX].pressure -
@@ -952,8 +952,8 @@ void update_screen(void)
   int32_t z1 = pa100_to_inh2o(ms5525_data.pressure);
   int32_t z2 = pa100_to_inh2o(serial_exchange_data.control.pitot_pressure*100);
 
-  lcd_printf(lcd_dev, 0, 2, "%7d.%02u%6d.%02u", w2/100, abs(w2%100), z2/100, abs(z2%100));
-  lcd_printf(lcd_dev, 0, 3, "%7d.%02u%6d.%02u", w1/100, abs(w1%100), z1/100, abs(z1%100));
+  lcd_printf(lcd_dev, 0, 2, "%7ld.%02ld%6ld.%02ld", w2/100, labs(w2%100), z2/100, labs(z2%100));
+  lcd_printf(lcd_dev, 0, 3, "%7ld.%02ld%6ld.%02ld", w1/100, labs(w1%100), z1/100, labs(z1%100));
 
 //  lcd_printf(lcd_dev, 0, 3, "T3=%3d.%02d\xb2", ms5525_data.temperature/100, ms5525_data.temperature%100);
   lcd_flush(lcd_dev);

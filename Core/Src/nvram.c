@@ -161,7 +161,7 @@ HAL_StatusTypeDef nvram_setup(I2C_HandleTypeDef *intf, uint16_t version)
           crc_diff = check_page_crc(ci);
 	  if (0 == crc_diff && version == page_cache[ci].ncb.version) {
 	      /* Check if serial_no numbers are increasing sequentially and stop if a gap is found */
-	      if (page_cache[ci].ncb.serial_no != prev_serial_no + 1)
+	      if (page_cache[ci].ncb.serial_no != (typeof(prev_serial_no))(prev_serial_no + 1))
 		break;
 
 	      active_nvram_page = i;

@@ -78,10 +78,13 @@ int usb_cdc_printf(const char *fmt, ...)
   va_start(args, fmt);
   int rslt = vsnprintf((char *)cdc_buf, sizeof(cdc_buf), fmt, args);
   va_end(args);
-  if (rslt > sizeof(cdc_buf))
-    rslt = sizeof(cdc_buf);
-  if (rslt > 0)
+
+  if (rslt > 0) {
+    if (rslt >= sizeof(cdc_buf))
+        rslt = sizeof(cdc_buf) - 1;
+
     CDC_Transmit_FS(cdc_buf, rslt);
+  }
 
   return rslt;
 }
@@ -167,8 +170,8 @@ void check_save_control_parameters(I2C_HandleTypeDef *intf)
 static
 void rx_handler_static_pressure(uint8_t code, int32_t parameter)
 {
-  if (parameter != MISSING_PARAM) {
-      serial_exchange_data.control.sm_modified = serial_exchange_data.control.static_pressure != parameter;
+  if (parameter != MISSING_PARAM && parameter >= 0) {
+      serial_exchange_data.control.sm_modified |= serial_exchange_data.control.static_pressure != parameter;
       serial_exchange_data.control.static_pressure = parameter;
   }
 }
@@ -177,7 +180,7 @@ static
 void rx_handler_pitot_pressure(uint8_t code, int32_t parameter)
 {
   if (parameter != MISSING_PARAM) {
-      serial_exchange_data.control.sm_modified = serial_exchange_data.control.pitot_pressure != parameter;
+      serial_exchange_data.control.sm_modified |= serial_exchange_data.control.pitot_pressure != parameter;
       serial_exchange_data.control.pitot_pressure = parameter;
   }
 }
@@ -186,7 +189,7 @@ static
 void rx_handler_pressure_tolerance_s(uint8_t code, int32_t parameter)
 {
   if (parameter != MISSING_PARAM && parameter >= MIN_STATIC_TOLERANCE_PA) {
-      serial_exchange_data.control.sm_modified = serial_exchange_data.control.tolerance_s != parameter;
+      serial_exchange_data.control.sm_modified |= serial_exchange_data.control.tolerance_s != parameter;
       serial_exchange_data.control.tolerance_s = parameter;
   }
 }
@@ -195,7 +198,7 @@ static
 void rx_handler_pressure_tolerance_p(uint8_t code, int32_t parameter)
 {
   if (parameter != MISSING_PARAM && parameter >= MIN_PITOT_TOLERANCE_PA) {
-      serial_exchange_data.control.sm_modified = serial_exchange_data.control.tolerance_p != parameter;
+      serial_exchange_data.control.sm_modified |= serial_exchange_data.control.tolerance_p != parameter;
       serial_exchange_data.control.tolerance_p = parameter;
   }
 }
@@ -203,8 +206,8 @@ void rx_handler_pressure_tolerance_p(uint8_t code, int32_t parameter)
 static
 void rx_handler_stepper_freq(uint8_t code, int32_t parameter)
 {
-  if (parameter != MISSING_PARAM) {
-      serial_exchange_data.control.sm_modified = serial_exchange_data.control.stepper_freq != parameter;
+  if (parameter != MISSING_PARAM && parameter >= 0) {
+      serial_exchange_data.control.sm_modified |= serial_exchange_data.control.stepper_freq != parameter;
       serial_exchange_data.control.stepper_freq = parameter;
   }
 }
@@ -212,8 +215,12 @@ void rx_handler_stepper_freq(uint8_t code, int32_t parameter)
 static
 void rx_handler_stepper_coef(uint8_t code, int32_t parameter)
 {
-  if (parameter != MISSING_PARAM) {
-      serial_exchange_data.control.sm_modified = serial_exchange_data.control.stepper_p != parameter;
+  if (parameter != MISSING_PARAM && parameter >= 0) {
+
+      if (parameter > STEPPER_P_SCALE)
+        parameter = STEPPER_P_SCALE;
+
+      serial_exchange_data.control.sm_modified |= serial_exchange_data.control.stepper_p != parameter;
       serial_exchange_data.control.stepper_p = parameter;
   }
 }
@@ -264,9 +271,12 @@ void rx_handler_display_parameters(uint8_t code, int32_t parameter)
 {
   unsigned i = 0;
   for (i = 0; i < lengthof(param_desc); i++) {
+/*
       int n = sprintf((char *)cdc_buf, "%s\t%ld\r\n", param_desc[i].desc, *(param_desc[i].value));
       CDC_Transmit_FS(cdc_buf, n);
       HAL_Delay(CDC_OUTPUT_DELAY);
+*/
+      usb_cdc_printf("%s\t%ld\r\n", param_desc[i].desc, *(param_desc[i].value));
   }
 }
 

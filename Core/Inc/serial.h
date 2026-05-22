@@ -38,7 +38,7 @@ typedef struct serial_exchange_data_s {
     int32_t tolerance_s;
     int32_t tolerance_p;
     int32_t stepper_freq; /* Hz */
-    int32_t stepper_p;    /* P coefficient, 1/256 x Hz/Pa */
+    int32_t stepper_p;    /* P coefficient, 1/256 x Hz/Pa, see STEPPER_P_SCALE */
     unsigned sm_debug_output:2;
     unsigned sm_modified:1;
   } control;
@@ -48,6 +48,7 @@ typedef struct serial_exchange_data_s {
   struct rx_buffer_data_s rx;
 } serial_exchange_data_t;
 
+#define STEPPER_P_SCALE 256
 
 extern serial_exchange_data_t serial_exchange_data;
 

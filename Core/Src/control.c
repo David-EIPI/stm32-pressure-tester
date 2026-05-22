@@ -234,7 +234,15 @@ inline static void set_stepper(bool onoff, bool positive)
 
       uint32_t max_freq = serial_exchange_data.control.stepper_freq;
 
-      uint32_t freq = (max_freq * pitot_delta / 16) * serial_exchange_data.control.stepper_p / 256;
+      /* Limit max_freq to a sane range, leaving enough bit width for pitot_delta.
+       Assuming that pitot_delta will never exceed (1<<19)Pa = 5bar */
+      if (max_freq >= (1<<13))
+        max_freq = (1 << 13)-1;
+
+      uint64_t fprod = (max_freq * pitot_delta / 16);
+      fprod = (fprod * serial_exchange_data.control.stepper_p) / STEPPER_P_SCALE;
+
+      uint32_t freq = (uint32_t)fprod;
 
       /* Apply limits */
       if (freq < max_freq / 100)
@@ -290,7 +298,7 @@ void read_input_signals(void)
   set_sm_state(SM_STATIC_HIGH,     (static_delta > serial_exchange_data.control.tolerance_s));
 
 /* Verify that MS5525 has pressure data before updating dependent input flags */
-  if (0 != (ms5525_data.type | MS5525DSO_DATA_PRESSURE)) {
+  if (0 != (ms5525_data.type & MS5525DSO_DATA_PRESSURE)) {
 
     int32_t pitot_pressure = ms5525_data.pressure / 100;
     int32_t pitot_delta = pitot_pressure - serial_exchange_data.control.pitot_pressure;
